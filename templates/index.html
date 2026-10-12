@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CYBER SHIELD</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2300d4ff%22 stroke-width=%222%22><path d=%22M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z%22/></svg>">
+<style>html,body{background:#020b18;margin:0}</style>
+<script src="/static/vendor/react.production.min.js"></script>
+<script src="/static/vendor/react-dom.production.min.js"></script>
+<script src="/static/vendor/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+// نفس الأصل: يشتغل الآن مباشرة من نفس السيرفر (Flask) فلا داعي لأي IP يدوي
+const BACKEND = "";
+
+const ATTACK_COLORS = {
+  "ARP Spoofing": "#ff4444",
+  "Port Scan":    "#ff8800",
+  "ICMP Flood":   "#ffcc00",
+  "SYN Flood":    "#cc44ff",
+  "ARP Flood":    "#ff6699",
+};
+const ATTACK_ICONS = {
+  "ARP Spoofing": "🕵️",
+  "Port Scan":    "🔍",
+  "ICMP Flood":   "📡",
+  "SYN Flood":    "⚡",
+  "ARP Flood":    "🌊",
+};
+
+function SplashScreen({ onDone }) {
+  const [progress, setProgress] = useState(0);
+  const [msg, setMsg] = useState("جاري التحقق من الأنظمة...");
+  useEffect(() => {
+    const msgs = ["جاري التحقق من الأنظمة...","تفعيل جدار الحماية...","فحص الشبكة...","جاهز!"];
+    const iv = setInterval(() => {
+      setProgress(p => {
+        const next = p + 1.5;
+        setMsg(msgs[Math.min(Math.floor(next/25), 3)]);
+        if (next >= 100) { clearInterval(iv); setTimeout(onDone, 400); return 100; }
+        return next;
+      });
+    }, 30);
+    return () => clearInterval(iv);
+  }, []);
+  return (
+    <div style={{position:"fixed",inset:0,background:"linear-gradient(135deg,#020b18,#041428,#020b18)",
+      display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,direction:"rtl"}}>
+      <div style={{position:"absolute",inset:0,opacity:0.05,
+        backgroundImage:"linear-gradient(#00d4ff 1px,transparent 1px),linear-gradient(90deg,#00d4ff 1px,transparent 1px)",
+        backgroundSize:"50px 50px",animation:"gridMove 4s linear infinite"}}/>
+      {[1,2,3].map(i=>(
+        <div key={i} style={{position:"absolute",width:`${180+i*70}px`,height:`${180+i*70}px`,
+          borderRadius:"50%",border:"1px solid rgba(0,212,255,0.12)",
+          animation:`pulse ${1.5+i*0.4}s ease-in-out infinite`,animationDelay:`${i*0.3}s`}}/>
+      ))}
+      <div style={{width:90,height:90,borderRadius:"50%",border:"2px solid #00d4ff",
+        display:"flex",alignItems:"center",justifyContent:"center",marginBottom:28,
+        boxShadow:"0 0 30px rgba(0,212,255,0.4)"}}>
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div style={{fontFamily:"'Courier New',monospace",fontSize:26,fontWeight:900,color:"#fff",letterSpacing:6,marginBottom:6}}>CYBER SHIELD</div>
+      <div style={{color:"#00d4ff",fontSize:13,marginBottom:36,letterSpacing:1}}>نظام رصد الهجمات السيبرانية</div>
+      <div style={{width:280,height:3,background:"rgba(0,212,255,0.15)",borderRadius:4,overflow:"hidden"}}>
+        <div style={{height:"100%",width:`${progress}%`,background:"linear-gradient(90deg,#00d4ff,#0099bb)",
+          transition:"width 0.03s linear",boxShadow:"0 0 10px #00d4ff"}}/>
+      </div>
+      <div style={{color:"#00d4ff",fontSize:12,marginTop:10,fontFamily:"monospace"}}>
+        {msg} <span style={{color:"#fff"}}>{Math.floor(progress)}%</span>
+      </div>
+      <style>{`
+        @keyframes pulse{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:.6;transform:scale(1.04)}}
+        @keyframes gridMove{0%{background-position:0 0}100%{background-position:50px 50px}}
+      `}</style>
+    </div>
+  );
+}
+
+function RadarScan() {
+  return (
+    <div style={{ textAlign: "center", padding: "26px 10px" }}>
+      <svg viewBox="0 0 200 200" style={{ width: 150, height: 150, margin: "0 auto", display: "block" }}>
+        <circle cx="100" cy="100" r="88" fill="none" stroke="#00d4ff" strokeOpacity="0.15" />
+        <circle cx="100" cy="100" r="58" fill="none" stroke="#00d4ff" strokeOpacity="0.15" />
+        <circle cx="100" cy="100" r="28" fill="none" stroke="#00d4ff" strokeOpacity="0.15" />
+        {[0, 26, 52].map((offset, idx) => (
+          <path key={idx} d="M100,100 L100,12 A88,88 0 0,1 132,22 Z" fill="#00d4ff" opacity={0.28 - idx * 0.09}>
+            <animateTransform attributeName="transform" type="rotate"
+              from={`${-offset} 100 100`} to={`${360 - offset} 100 100`} dur="2.4s" repeatCount="indefinite" />
+          </path>
+        ))}
+        <circle cx="100" cy="100" r="4" fill="#00d4ff" />
+      </svg>
+      <div style={{ color: "#00d4ff", fontSize: 13, marginTop: 10 }}>📡 جاري مسح الشبكة...</div>
+      <div style={{ color: "#556677", fontSize: 11, marginTop: 4 }}>بيدوّر على كل الأجهزة المتصلة</div>
+    </div>
+  );
+}
+
+function NetworkMap({ devices }) {
+  const size = 320;
+  const cx = size / 2, cy = size / 2;
+  const others = devices.filter(d => !d.is_you);
+  const useTwoRings = others.length > 6;
+  const ring1 = useTwoRings ? others.filter((_, i) => i % 2 === 0) : others;
+  const ring2 = useTwoRings ? others.filter((_, i) => i % 2 === 1) : [];
+  const R1 = useTwoRings ? 62 : Math.min(100, 58 + others.length * 6);
+  const R2 = 112;
+
+  const renderRing = (ringDevices, R, dir) => ringDevices.map((d, i) => {
+    const angle = (2 * Math.PI * i) / Math.max(ringDevices.length, 1) - Math.PI / 2;
+    const angleDeg = angle * 180 / Math.PI;
+    const x = cx + R * Math.cos(angle);
+    const y = cy + R * Math.sin(angle);
+    const color = d.suspicious ? "#ff4444" : "#00d4ff";
+    const dur = 34 + (i % 4) * 7;
+    const icon = d.suspicious ? "⚠️" : (d.icon || "🖥️");
+    return (
+      <g key={d.ip}>
+        <animateTransform attributeName="transform" type="rotate"
+          from={`${angleDeg} ${cx} ${cy}`} to={`${angleDeg + dir * 360} ${cx} ${cy}`}
+          dur={`${dur}s`} repeatCount="indefinite" />
+        <line x1={cx} y1={cy} x2={x} y2={y} stroke={color} strokeOpacity={0.3} strokeWidth={1.5} />
+        <circle cx={x} cy={y} r={16} fill={`${color}22`} stroke={color} strokeWidth={2}>
+          {d.suspicious && <animate attributeName="r" values="16;19;16" dur="1.2s" repeatCount="indefinite" />}
+        </circle>
+        <g>
+          <animateTransform attributeName="transform" type="rotate"
+            from={`${-angleDeg} ${x} ${y}`} to={`${-angleDeg - dir * 360} ${x} ${y}`}
+            dur={`${dur}s`} repeatCount="indefinite" />
+          <text x={x} y={y + 5} textAnchor="middle" fontSize={13}>{icon}</text>
+          <text x={x} y={y + 30} textAnchor="middle" fontSize={8} fill={color} fontFamily="monospace"
+            paintOrder="stroke" stroke="#020b18" strokeWidth={3} strokeLinejoin="round">{d.ip}</text>
+        </g>
+      </g>
+    );
+  });
+
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} style={{ width: "100%", maxWidth: 320, display: "block", margin: "0 auto" }}>
+      <circle cx={cx} cy={cy} r={R1} fill="none" stroke="#00d4ff" strokeOpacity={0.15} strokeDasharray="3 5" />
+      {useTwoRings && <circle cx={cx} cy={cy} r={R2} fill="none" stroke="#00d4ff" strokeOpacity={0.12} strokeDasharray="3 5" />}
+      {renderRing(ring1, R1, 1)}
+      {useTwoRings && renderRing(ring2, R2, -1)}
+      <circle cx={cx} cy={cy} r={24} fill="#020b18" stroke="#00d4ff" strokeWidth={2}>
+        <animate attributeName="r" values="24;26;24" dur="2.4s" repeatCount="indefinite" />
+      </circle>
+      <text x={cx} y={cy + 6} textAnchor="middle" fontSize={18}>💻</text>
+    </svg>
+  );
+}
+
+function App() {
+  const [splash, setSplash]       = useState(true);
+  const [page, setPage]           = useState("dashboard");
+  const [menuOpen, setMenuOpen]   = useState(false);
+  const [attacks, setAttacks]     = useState([]);
+  const [stats, setStats]         = useState({total:0,critical:0,warnings:0,blocked:0});
+  const [devices, setDevices]     = useState([]);
+  const [connected, setConnected] = useState(false);
+  const [url, setUrl]             = useState("");
+  const [simForm, setSimForm]     = useState({type:"ARP Spoofing",ip:"",target:"",desc:""});
+  const [simMsg, setSimMsg]       = useState("");
+  const [scanning, setScanning]   = useState(false);
+  const esRef = useRef(null);
+
+  const refreshDevices = () => fetch(`${BACKEND}/api/devices`).then(r=>r.json()).then(setDevices).catch(()=>{});
+
+  const scanNetwork = () => {
+    setScanning(true);
+    fetch(`${BACKEND}/api/scan`, { method: "POST" })
+      .then(() => setTimeout(() => { refreshDevices(); setScanning(false); }, 3500))
+      .catch(() => setScanning(false));
+  };
+
+  useEffect(() => {
+    if (splash) return;
+    const connect = () => {
+      const es = new EventSource(`${BACKEND}/api/stream`);
+      esRef.current = es;
+      es.onopen = () => setConnected(true);
+      es.onerror = () => { setConnected(false); es.close(); setTimeout(connect, 3000); };
+      es.onmessage = (e) => {
+        if (e.data === "connected") return;
+        try {
+          const a = JSON.parse(e.data);
+          setAttacks(prev => [a, ...prev.slice(0,199)]);
+          setStats(prev => ({
+            total:    prev.total+1,
+            critical: prev.critical+(a.severity==="حرج"?1:0),
+            warnings: prev.warnings+(a.severity!=="حرج"?1:0),
+            blocked:  prev.blocked+(a.status==="محظور"?1:0),
+          }));
+        } catch {}
+      };
+    };
+    fetch(`${BACKEND}/api/attacks`).then(r=>r.json()).then(setAttacks).catch(()=>{});
+    fetch(`${BACKEND}/api/stats`).then(r=>r.json()).then(setStats).catch(()=>{});
+    fetch(`${BACKEND}/api/devices`).then(r=>r.json()).then(setDevices).catch(()=>{});
+    connect();
+    const devTick = setInterval(()=>{
+      fetch(`${BACKEND}/api/devices`).then(r=>r.json()).then(setDevices).catch(()=>{});
+    }, 10000);
+    return () => { esRef.current?.close(); clearInterval(devTick); };
+  }, [splash]);
+
+  if (splash) return <SplashScreen onDone={() => setSplash(false)} />;
+
+  const NavItem = ({ id, label, icon }) => (
+    <div onClick={() => { setPage(id); setMenuOpen(false); }} style={{
+      padding:"14px 20px",cursor:"pointer",display:"flex",alignItems:"center",gap:12,
+      background:page===id?"rgba(0,212,255,0.1)":"transparent",
+      borderRight:page===id?"3px solid #00d4ff":"3px solid transparent",
+      color:page===id?"#00d4ff":"#8899aa",fontSize:14,transition:"all .2s"
+    }}><span>{icon}</span><span>{label}</span></div>
+  );
+
+  const clearAll = () => {
+    fetch(`${BACKEND}/api/clear`,{method:"POST"}).then(()=>{
+      setAttacks([]); setStats({total:0,critical:0,warnings:0,blocked:0});
+    }).catch(()=>{});
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#020b18",fontFamily:"'Segoe UI',Tahoma,sans-serif",direction:"rtl",color:"#fff"}}>
+      <style>{`
+        *{box-sizing:border-box;margin:0;padding:0;scrollbar-width:thin;scrollbar-color:#00d4ff22 transparent}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+        @keyframes newRow{from{background:rgba(0,212,255,0.1)}to{background:transparent}}
+        .card{background:rgba(255,255,255,0.03);border:1px solid rgba(0,212,255,0.12);border-radius:12px;padding:20px;animation:fadeIn .4s ease}
+        .btn{background:transparent;border:1px solid #00d4ff;color:#00d4ff;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;transition:all .2s}
+        .btn:hover{background:rgba(0,212,255,0.1)}
+        .inp{background:rgba(0,0,0,.4);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:10px 14px;color:#fff;font-size:13px;width:100%;outline:none;font-family:inherit;transition:border .2s}
+        .inp:focus{border-color:#00d4ff}
+        .inp::placeholder{color:#445566}
+        .new-row{animation:newRow 2s ease}
+      `}</style>
+
+      {/* Header */}
+      <div style={{background:"rgba(2,11,24,0.95)",borderBottom:"1px solid rgba(0,212,255,0.15)",
+        padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",
+        position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
+        <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:"none",border:"none",color:"#00d4ff",cursor:"pointer",fontSize:20}}>
+          {menuOpen?"✕":"☰"}
+        </button>
+        <div style={{textAlign:"center"}}>
+          <div style={{fontFamily:"monospace",fontWeight:900,fontSize:16,letterSpacing:3}}>CYBER SHIELD</div>
+          <div style={{color:"#00d4ff",fontSize:10,letterSpacing:1}}>نظام رصد الهجمات السيبرانية</div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <div style={{width:7,height:7,borderRadius:"50%",
+            background:connected?"#00ff88":"#ff4444",
+            animation:connected?"blink 1.5s infinite":"none"}}/>
+          <span style={{fontSize:10,color:connected?"#00ff88":"#ff4444"}}>
+            {connected?"متصل":"غير متصل"}
+          </span>
+        </div>
+      </div>
+
+      {/* Menu */}
+      {menuOpen && (
+        <div style={{position:"fixed",top:65,right:0,bottom:0,width:230,
+          background:"rgba(2,8,20,0.98)",borderLeft:"1px solid rgba(0,212,255,0.15)",
+          zIndex:200,backdropFilter:"blur(20px)",animation:"fadeIn .2s ease"}}>
+          <NavItem id="dashboard" label="لوحة التحكم"   icon="📊"/>
+          <NavItem id="devices"   label="الأجهزة"        icon="🖥️"/>
+          <NavItem id="url-check" label="فحص الروابط"   icon="🔗"/>
+          <NavItem id="log"       label="سجل الهجمات"   icon="📋"/>
+          <NavItem id="types"     label="أنواع الهجمات" icon="🛡️"/>
+          <NavItem id="simulate"  label="تسجيل يدوي"    icon="✏️"/>
+        </div>
+      )}
+
+      <div style={{padding:"20px 16px",maxWidth:700,margin:"0 auto"}}>
+
+        {/* ── لوحة التحكم ── */}
+        {page==="dashboard" && (
+          <div style={{animation:"fadeIn .4s ease"}}>
+            {!connected && (
+              <div style={{background:"#ff444418",border:"1px solid #ff444433",borderRadius:8,
+                padding:"10px 14px",marginBottom:16,fontSize:12,color:"#ff8888",textAlign:"center"}}>
+                ⚠️ الاتصال بالسيرفر منقطع — تأكد إن backend.py شغّال كـ Administrator
+              </div>
+            )}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+              {[
+                {label:"هجمات حرجة", value:stats.critical, color:"#ff4444", icon:"🚨"},
+                {label:"إجمالي",      value:stats.total,    color:"#00d4ff", icon:"📡"},
+                {label:"تم حظرها",   value:stats.blocked,  color:"#00ff88", icon:"✅"},
+                {label:"تحذيرات",    value:stats.warnings, color:"#ffcc00", icon:"⚠️"},
+              ].map((s,i)=>(
+                <div key={i} className="card" style={{textAlign:"center"}}>
+                  <div style={{fontSize:22,marginBottom:4}}>{s.icon}</div>
+                  <div style={{fontSize:30,fontWeight:900,color:s.color,fontFamily:"monospace"}}>{s.value}</div>
+                  <div style={{fontSize:11,color:"#667788",marginTop:4}}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="card">
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <span style={{color:"#00d4ff",fontSize:14}}>آخر الهجمات المرصودة</span>
+                <button className="btn" onClick={clearAll} style={{fontSize:11,padding:"5px 12px",borderColor:"#ff4444",color:"#ff4444"}}>مسح</button>
+              </div>
+              {attacks.slice(0,8).map((a,i)=>(
+                <div key={a.id} className={i===0?"new-row":""} style={{display:"flex",alignItems:"center",gap:10,
+                  padding:"10px 0",borderBottom:i<7?"1px solid rgba(255,255,255,0.04)":"none"}}>
+                  <div style={{width:36,height:36,borderRadius:8,fontSize:18,flexShrink:0,
+                    background:`${ATTACK_COLORS[a.type]||"#00d4ff"}22`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {ATTACK_ICONS[a.type]||"🔴"}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:600,marginBottom:2}}>{a.type}</div>
+                    <div style={{fontSize:10,color:"#556677",fontFamily:"monospace",direction:"ltr"}}>{a.ip} → {a.target}</div>
+                  </div>
+                  <div style={{textAlign:"left",flexShrink:0}}>
+                    <div style={{fontSize:10,padding:"3px 8px",borderRadius:4,
+                      background:a.status==="محظور"?"#00ff8822":"#ff444422",
+                      color:a.status==="محظور"?"#00ff88":"#ff4444",
+                      border:`1px solid ${a.status==="محظور"?"#00ff8844":"#ff444444"}`}}>{a.status}</div>
+                    <div style={{fontSize:9,color:"#445566",marginTop:4,textAlign:"center"}}>{a.time}</div>
+                  </div>
+                </div>
+              ))}
+              {attacks.length===0 && (
+                <div style={{color:"#445566",textAlign:"center",padding:24,fontSize:13}}>
+                  {connected?"لا توجد هجمات — جاري المراقبة...":"في انتظار الاتصال بالـ Backend..."}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── الأجهزة / خريطة الشبكة ── */}
+        {page==="devices" && (
+          <div style={{animation:"fadeIn .4s ease"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <div style={{color:"#00d4ff",fontSize:15}}>🗺️ خريطة الشبكة ({devices.length})</div>
+              <button className="btn" onClick={scanNetwork} disabled={scanning}
+                style={{fontSize:11,padding:"6px 12px",opacity:scanning?0.5:1}}>
+                {scanning ? "⏳ جاري المسح..." : "🔍 مسح الآن"}
+              </button>
+            </div>
+
+            <div className="card" style={{marginBottom:14}}>
+              {devices.length===0 ? <RadarScan/> : <NetworkMap devices={devices}/>}
+            </div>
+
+            <div className="card">
+              {devices.map((d,i)=>(
+                <div key={d.ip} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",
+                  borderBottom:i<devices.length-1?"1px solid rgba(255,255,255,0.04)":"none"}}>
+                  <div style={{fontSize:20}}>{d.suspicious ? "⚠️" : (d.icon || "🖥️")}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontFamily:"monospace",fontSize:13,color:d.suspicious?"#ff4444":"#00d4ff"}}>
+                      {d.ip} {d.is_you && <span style={{color:"#667788",fontSize:11}}>(أنت)</span>}
+                    </div>
+                    <div style={{fontSize:10,color:"#667788",marginTop:2}}>
+                      {d.vendor && d.vendor !== "غير معروف" ? d.vendor : "نوع الجهاز غير معروف"}
+                    </div>
+                    <div style={{fontFamily:"monospace",fontSize:10,color:"#556677",direction:"ltr",textAlign:"right"}}>{d.mac}</div>
+                  </div>
+                  {d.suspicious && (
+                    <div style={{fontSize:10,padding:"3px 8px",borderRadius:4,background:"#ff444422",color:"#ff4444",
+                      border:"1px solid #ff444444",whiteSpace:"nowrap"}}>{d.attack_count} هجوم</div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div style={{color:"#445566",fontSize:10,textAlign:"center",marginTop:10}}>
+              💡 نوع الجهاز تقديري حسب الشركة المصنّعة لكرت الشبكة — مش دقيق 100% مع الموبايلات اللي بتغيّر الـ MAC تلقائيًا
+            </div>
+          </div>
+        )}
+
+        {/* ── فحص الروابط ── */}
+        {page==="url-check" && (
+          <div className="card" style={{animation:"fadeIn .4s ease"}}>
+            <div style={{textAlign:"center",marginBottom:24}}>
+              <div style={{fontSize:30,marginBottom:8}}>🔗</div>
+              <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>فحص الروابط</div>
+              <div style={{fontSize:12,color:"#667788"}}>تحقق من سلامة أي رابط عبر أدوات متخصصة</div>
+            </div>
+            <input className="inp" placeholder="https://example.com" value={url}
+              onChange={e=>setUrl(e.target.value)} style={{marginBottom:16,direction:"ltr"}}/>
+            {[
+              {name:"VirusTotal",          emoji:"🛡️",color:"#394ef0",desc:"فحص بأكثر من 70 محرك أمني",
+               href:`https://www.virustotal.com/gui/url/${encodeURIComponent(url||"")}`},
+              {name:"URLScan.io",          emoji:"🔍",color:"#ff6600",desc:"تحليل الرابط وسلوكه بشكل مفصل",
+               href:`https://urlscan.io/search/#${encodeURIComponent(url||"")}`},
+              {name:"Google Safe Browsing",emoji:"🌐",color:"#4285f4",desc:"قاعدة بيانات جوجل للمواقع الضارة",
+               href:`https://transparencyreport.google.com/safe-browsing/search?url=${encodeURIComponent(url||"")}`},
+              {name:"Sucuri SiteCheck",    emoji:"🧹",color:"#00aa55",desc:"فحص البرمجيات الخبيثة والقائمة السوداء",
+               href:`https://sitecheck.sucuri.net/results/${encodeURIComponent(url||"")}`},
+            ].map((t,i)=>(
+              <a key={i} href={t.href} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",
+                  background:"rgba(255,255,255,0.03)",border:`1px solid ${t.color}33`,
+                  borderRadius:10,cursor:"pointer",marginBottom:10,transition:"all .2s"}}
+                  onMouseEnter={e=>e.currentTarget.style.background=`${t.color}11`}
+                  onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.03)"}>
+                  <div style={{fontSize:24}}>{t.emoji}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:14,fontWeight:700}}>{t.name}</div>
+                    <div style={{fontSize:11,color:"#667788"}}>{t.desc}</div>
+                  </div>
+                  <div style={{color:t.color}}>←</div>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* ── سجل الهجمات ── */}
+        {page==="log" && (
+          <div style={{animation:"fadeIn .4s ease"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <div style={{color:"#00d4ff",fontSize:15}}>📋 سجل الهجمات ({attacks.length})</div>
+              <button className="btn" onClick={clearAll} style={{fontSize:11,padding:"6px 12px",borderColor:"#ff4444",color:"#ff4444"}}>مسح الكل</button>
+            </div>
+            <div className="card" style={{padding:0,overflow:"hidden"}}>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <thead>
+                    <tr style={{background:"rgba(0,212,255,0.08)",borderBottom:"1px solid rgba(0,212,255,0.15)"}}>
+                      {["النوع","IP المصدر","الخطورة","الهدف","الحالة","الوقت"].map(h=>(
+                        <th key={h} style={{padding:"10px",color:"#8899aa",fontWeight:600,textAlign:"right",whiteSpace:"nowrap"}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attacks.map((a,i)=>(
+                      <tr key={a.id} className={i===0?"new-row":""} style={{borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+                        <td style={{padding:"9px 10px",whiteSpace:"nowrap"}}>{ATTACK_ICONS[a.type]||"🔴"} {a.type}</td>
+                        <td style={{padding:"9px 10px",fontFamily:"monospace",color:"#aabbcc",direction:"ltr",fontSize:11}}>{a.ip}</td>
+                        <td style={{padding:"9px 10px"}}>
+                          <span style={{padding:"2px 7px",borderRadius:4,fontSize:10,
+                            background:a.severity==="حرج"?"#ff444433":"#ffcc0033",
+                            color:a.severity==="حرج"?"#ff4444":"#ffcc00"}}>{a.severity}</span>
+                        </td>
+                        <td style={{padding:"9px 10px",color:"#8899aa",whiteSpace:"nowrap"}}>{a.target}</td>
+                        <td style={{padding:"9px 10px"}}>
+                          <span style={{padding:"2px 7px",borderRadius:4,fontSize:10,
+                            background:a.status==="محظور"?"#00ff8822":"#ff444422",
+                            color:a.status==="محظور"?"#00ff88":"#ff4444"}}>{a.status}</span>
+                        </td>
+                        <td style={{padding:"9px 10px",color:"#556677",fontFamily:"monospace",fontSize:10}}>{a.time}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {attacks.length===0 && <div style={{textAlign:"center",padding:30,color:"#445566"}}>السجل فارغ</div>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── أنواع الهجمات ── */}
+        {page==="types" && (
+          <div style={{animation:"fadeIn .4s ease"}}>
+            <div style={{color:"#00d4ff",fontSize:15,marginBottom:14}}>🛡️ أنواع الهجمات والحماية</div>
+            {[
+              {type:"ARP Spoofing",en:"ARP Spoofing / MITM",tips:["تفعيل Dynamic ARP Inspection على السويتش","استخدام VPN في الشبكة","مراقبة جدول ARP باستمرار"]},
+              {type:"ARP Flood",   en:"ARP Flood (Disconnect Attack)",tips:["تحديد معدل حزم ARP","تفعيل Port Security على السويتش","حظر الجهاز المهاجم من الراوتر"]},
+              {type:"Port Scan",  en:"Port Scanning",tips:["إغلاق المنافذ غير الضرورية","استخدام Firewall","تفعيل IDS/IPS"]},
+              {type:"SYN Flood",  en:"SYN Flood",tips:["تفعيل SYN Cookies","تحديد معدل اتصالات TCP","استخدام Load Balancer"]},
+              {type:"ICMP Flood", en:"ICMP Flood (Ping Flood)",tips:["تحديد معدل ICMP packets","حظر ICMP من مصادر غير موثوقة","تفعيل rate limiting"]},
+            ].map(({type,en,tips})=>(
+              <div key={type} className="card" style={{marginBottom:12}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                  <div style={{width:40,height:40,borderRadius:10,fontSize:20,
+                    background:`${ATTACK_COLORS[type]||"#00d4ff"}22`,display:"flex",alignItems:"center",justifyContent:"center",
+                    border:`1px solid ${ATTACK_COLORS[type]||"#00d4ff"}44`}}>
+                    {ATTACK_ICONS[type]||"🔴"}
+                  </div>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:14}}>{type}</div>
+                    <div style={{fontSize:11,color:"#667788"}}>{en}</div>
+                  </div>
+                </div>
+                {tips.map((tip,i)=>(
+                  <div key={i} style={{display:"flex",gap:8,marginBottom:6}}>
+                    <span style={{color:ATTACK_COLORS[type]||"#00d4ff"}}>●</span>
+                    <span style={{fontSize:12,color:"#ccd"}}>{tip}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── تسجيل يدوي ── */}
+        {page==="simulate" && (
+          <div className="card" style={{animation:"fadeIn .4s ease"}}>
+            <div style={{textAlign:"center",marginBottom:24}}>
+              <div style={{fontSize:30,marginBottom:8}}>✏️</div>
+              <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>تسجيل هجوم يدوي</div>
+              <div style={{fontSize:12,color:"#667788"}}>سجّل هجوماً اكتشفته يدوياً في النظام</div>
+            </div>
+            {simMsg && (
+              <div style={{background:"#00ff8822",border:"1px solid #00ff8844",borderRadius:8,
+                padding:12,marginBottom:16,textAlign:"center",color:"#00ff88",fontSize:13}}>{simMsg}</div>
+            )}
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:12,color:"#8899aa",marginBottom:6}}>نوع الهجوم</div>
+              <select className="inp" value={simForm.type} onChange={e=>setSimForm({...simForm,type:e.target.value})}>
+                {Object.keys(ATTACK_ICONS).map(k=>(
+                  <option key={k} value={k} style={{background:"#020b18"}}>{k}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:12,color:"#8899aa",marginBottom:6}}>IP المصدر (اختياري)</div>
+              <input className="inp" placeholder="192.168.1.100" value={simForm.ip}
+                onChange={e=>setSimForm({...simForm,ip:e.target.value})} style={{direction:"ltr"}}/>
+            </div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:12,color:"#8899aa",marginBottom:6}}>الهدف (اختياري)</div>
+              <input className="inp" placeholder="هذا الجهاز" value={simForm.target}
+                onChange={e=>setSimForm({...simForm,target:e.target.value})}/>
+            </div>
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:12,color:"#8899aa",marginBottom:6}}>الوصف</div>
+              <textarea className="inp" rows={3} placeholder="وصف للهجوم..." value={simForm.desc}
+                onChange={e=>setSimForm({...simForm,desc:e.target.value})} style={{resize:"vertical"}}/>
+            </div>
+            <button className="btn" style={{width:"100%",padding:14,fontSize:14,fontWeight:700,
+              background:"rgba(255,200,0,0.08)",borderColor:"#ffcc00",color:"#ffcc00"}}
+              onClick={()=>{
+                fetch(`${BACKEND}/api/simulate`,{
+                  method:"POST",
+                  headers:{"Content-Type":"application/json"},
+                  body:JSON.stringify(simForm)
+                }).then(r=>r.json()).then(a=>{
+                  setAttacks(prev=>[a,...prev]);
+                  setStats(prev=>({...prev,total:prev.total+1,critical:prev.critical+1}));
+                  setSimMsg("✅ تم تسجيل الهجوم في السجل!");
+                  setSimForm({type:"ARP Spoofing",ip:"",target:"",desc:""});
+                  setTimeout(()=>setSimMsg(""),3000);
+                }).catch(()=>{
+                  setSimMsg("⚠️ تعذر الاتصال بالسيرفر");
+                  setTimeout(()=>setSimMsg(""),3000);
+                });
+              }}>⚡ تسجيل الهجوم</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
